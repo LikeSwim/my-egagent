@@ -121,11 +121,26 @@ def get_rel_timestamper_llm(model, config):
     else:
         return get_llm_worker(rel_timestamper_system, rel_timestamper_user_caption, RelationshipsOutput, model)
 
-async def generate_graph_for_hour(text:str):
+def _get_llm_for_graph(model: str):
+    """Return the LLM instance for graph extraction (same backend as get_llm_worker)."""
+    if model in ['gpt-4.1', 'gpt-4o']:
+        return get_vision_llm(model)
+    if model in ['gpt-5', 'o3']:
+        return get_reasoning_llm(model)
+    if model == 'gemini-2.5-pro':
+        return get_external_gemini_llm(model)
+    if model == 'qwen-2.5-vl-7b':
+        return get_vLLM("localhost", "Qwen/Qwen2.5-VL-7B-Instruct")
+    if model == 'openai_compatible':
+        return get_openai_compatible_llm()
+    return get_vision_llm(model)
+
+
+async def generate_graph_for_hour(text: str, model: str = "gpt-4.1"):
     """Generate the entity graph for one hour of EgoLife or entire VideoMME video."""
     allowed_nodes = ["Person", "Location", "Object"]
     allowed_relationships = ["TALKS_TO", "INTERACTS_WITH", "MENTIONS", "USES"]
-    llm = get_vision_llm('gpt-4.1')
+    llm = _get_llm_for_graph(model)
     documents = [Document(page_content=str(text))]
     props_defined = LLMGraphTransformer(
         llm=llm,

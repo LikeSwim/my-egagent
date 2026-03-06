@@ -124,7 +124,7 @@ async def run_entity_graph_for_custom(
     video_id: str,
     transcript_path: Path,
     output_json: Path,
-    mllm: str = "gpt-4.1",
+    mllm: str = "openai_compatible",
 ) -> None:
     """对单视频的转写文本抽取实体图并打时间戳，保存为 JSON。"""
     from create_entity_graph import (
@@ -149,7 +149,7 @@ async def run_entity_graph_for_custom(
     # 1) 从转写文本抽取实体与关系
     if not rel_outfile.exists():
         print("正在从转写文本抽取实体与关系...")
-        graph_documents = await generate_graph_for_hour(subtitles_only_text)
+        graph_documents = await generate_graph_for_hour(subtitles_only_text, model=mllm)
         relationships_parsed = parse_relationships(graph_documents)
         with open(rel_outfile, "w", encoding="utf-8") as f:
             json.dump(relationships_parsed, f, indent=4, ensure_ascii=False)
@@ -215,8 +215,8 @@ def parse_args():
     parser.add_argument(
         "--mllm",
         type=str,
-        default="gpt-4.1",
-        help="用于关系时间戳的多模态 LLM（默认 gpt-4.1，可改为 openai_compatible 等）",
+        default="openai_compatible",
+        help="用于实体抽取与时间戳的 LLM：openai_compatible（默认，用 paths 中第三方 API）、gpt-4.1、gemini-2.5-pro 等",
     )
     parser.add_argument(
         "--skip-1fps",
