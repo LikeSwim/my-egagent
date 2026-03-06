@@ -10,7 +10,7 @@ DEFAULT_SEGMENT_DURATION_SEC = 600  # 10 分钟（与 LEMON 论文一致）
 
 def get_video_duration_sec(video_path: str | Path, ffmpeg: str = "ffmpeg") -> float:
     """获取视频时长（秒）。先尝试 ffprobe，再回退到解析 ffmpeg 输出。失败返回 0。"""
-    video_path = Path(video_path)
+    video_path = Path(video_path).resolve()
     if not video_path.is_file():
         return 0.0
 
@@ -34,9 +34,16 @@ def get_video_duration_sec(video_path: str | Path, ffmpeg: str = "ffmpeg") -> fl
             timeout=10,
         )
         if out.returncode == 0 and out.stdout:
-            s = out.stdout.strip().split("\n")[0].strip()
-            if s and s.replace(".", "").replace(",", "").isdigit():
-                return float(s.replace(",", "."))
+            for line in out.stdout.strip().splitlines():
+                s = line.strip().strip("\ufeff")
+                if not s:
+                    continue
+                try:
+                    v = float(s.replace(",", "."))
+                    if v >= 0:
+                        return v
+                except ValueError:
+                    pass
     except (FileNotFoundError, ValueError, subprocess.TimeoutExpired):
         pass
 
@@ -51,8 +58,8 @@ def get_video_duration_sec(video_path: str | Path, ffmpeg: str = "ffmpeg") -> fl
             timeout=15,
         )
         combined = (out.stderr or "") + (out.stdout or "")
-        # 匹配 Duration: HH:MM:SS.ms 或 HH:MM:SS,ms
-        dur_match = re.search(r"Duration:\s*(\d+):(\d+):(\d+)[.,]?\d*", combined)
+        # 匹配 Duration: HH:MM:SS.ms 或 HH:MM:SS,ms（放宽空格）
+        dur_match = re.search(r"Duration:\s*(\d+):(\d+):(\d+)[.,]?\d*", combined, re.IGNORECASE)
         if dur_match:
             h, m, s = int(dur_match.group(1)), int(dur_match.group(2)), float(dur_match.group(3))
             return h * 3600 + m * 60 + s
@@ -66,6 +73,7 @@ def segment_video_by_duration(
     output_dir: str | Path,
     duration_sec: int = DEFAULT_SEGMENT_DURATION_SEC,
     ffmpeg: str = "ffmpeg",
+    verbose: bool = False,
 ) -> list[dict]:
     """
     将视频按固定时长切分为多个片段。
@@ -75,6 +83,8 @@ def segment_video_by_duration(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     total_sec = get_video_duration_sec(video_path, ffmpeg)
+    if verbose:
+        print(f"  视频时长: {total_sec:.1f} 秒" if total_sec > 0 else "  视频时长: 无法解析（请检查 ffprobe/ffmpeg 及视频文件）")
     if total_sec <= 0:
         return []
     segments = []

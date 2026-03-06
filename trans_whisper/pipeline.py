@@ -42,19 +42,27 @@ def video_to_transcripts(
     # 0. 整段视频抽音 → Whisper 带时间戳转写 → 生成视频配套 SRT（与 create_kg_custom_video 等兼容）
     full_audio = out_audio / f"{video_path.stem}_full.wav"
     srt_path = output_dir / f"{video_path.stem}.srt"
+    print("正在抽取整段音频...")
     if extract_audio(video_path, output_path=full_audio, ffmpeg=ffmpeg):
+        print("整段音频已抽取，正在 Whisper 转写（可能较久）...")
         segs = transcribe_audio_to_segments(full_audio, model=whisper_model, language=language)
         if segs:
             srt_path.write_text(segments_to_srt(segs), encoding="utf-8")
+            print(f"  已生成视频配套 SRT: {srt_path}（{len(segs)} 条）")
+        else:
+            print("  Whisper 未返回带时间戳的段落，跳过 SRT。")
         if not keep_audio:
             try:
                 full_audio.unlink(missing_ok=True)
             except Exception:
                 pass
+    else:
+        print("整段音频抽取失败（视频可能无音轨或 ffmpeg 报错），跳过 SRT。")
 
     # 1. 分段
+    print("正在解析视频时长并分段...")
     segments = segment_video_by_duration(
-        video_path, out_segments, duration_sec=segment_duration_sec, ffmpeg=ffmpeg
+        video_path, out_segments, duration_sec=segment_duration_sec, ffmpeg=ffmpeg, verbose=True
     )
     if not segments:
         # 分段失败（如无法解析时长）时，若已生成 SRT 仍视为部分成功
