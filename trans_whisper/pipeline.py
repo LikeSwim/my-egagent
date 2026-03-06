@@ -3,7 +3,12 @@
 from pathlib import Path
 
 from trans_whisper.segment import segment_video_by_duration, extract_audio
-from trans_whisper.transcribe import transcribe_audio, transcribe_audio_to_segments, segments_to_srt
+from trans_whisper.transcribe import (
+    transcribe_audio,
+    transcribe_audio_to_segments,
+    transcribe_audio_to_segments_diarized,
+    segments_to_srt,
+)
 
 
 def video_to_transcripts(
@@ -16,6 +21,9 @@ def video_to_transcripts(
     ffmpeg: str = "ffmpeg",
     keep_segments: bool = True,
     keep_audio: bool = False,
+    diarize: bool = False,
+    hf_token: str | None = None,
+    speaker_prefix: str = "说话人",
 ) -> list[dict]:
     """
     输入讲座视频，输出每段的字幕及合并字幕文件。
@@ -44,11 +52,21 @@ def video_to_transcripts(
     srt_path = output_dir / f"{video_path.stem}.srt"
     print("正在抽取整段音频...")
     if extract_audio(video_path, output_path=full_audio, ffmpeg=ffmpeg):
-        print("整段音频已抽取，正在 Whisper 转写（可能较久）...")
-        segs = transcribe_audio_to_segments(full_audio, model=whisper_model, language=language)
+        segs = None
+        if diarize:
+            print("整段音频已抽取，正在 WhisperX 转写 + 说话人分离（可能较久）...")
+            segs = transcribe_audio_to_segments_diarized(
+                full_audio, model=whisper_model, language=language, hf_token=hf_token
+            )
+            if segs is None:
+                print("  WhisperX 说话人分离不可用或失败，改用普通 Whisper 转写。")
+        if segs is None:
+            print("整段音频已抽取，正在 Whisper 转写（可能较久）...")
+            segs = transcribe_audio_to_segments(full_audio, model=whisper_model, language=language)
         if segs:
-            srt_path.write_text(segments_to_srt(segs), encoding="utf-8")
-            print(f"  已生成视频配套 SRT: {srt_path}（{len(segs)} 条）")
+            has_speaker = any(s.get("speaker") for s in segs)
+            srt_path.write_text(segments_to_srt(segs, speaker_prefix=speaker_prefix), encoding="utf-8")
+            print(f"  已生成视频配套 SRT: {srt_path}（{len(segs)} 条" + ("，含说话人" if has_speaker else "") + "）")
         else:
             print("  Whisper 未返回带时间戳的段落，跳过 SRT。")
         if not keep_audio:

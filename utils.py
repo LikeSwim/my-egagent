@@ -43,7 +43,7 @@ from paths import (
     DB_ROOT,
     THIRD_PARTY_OPENAI_BASE_URL,
     THIRD_PARTY_OPENAI_MODEL,
-    THIRD_PARTY_OPENAI_KEY_PATH,
+    THIRD_PARTY_OPENAI_KEY,
 )
 
 def flatten_list(xss):
@@ -65,7 +65,7 @@ def get_base64imagelist_from_filepathlist(retrieved_image_paths):
 def get_vision_llm(llm_name: str) -> ChatOpenAI:
     """Get a vision-capable LLM using Langchain's ChatOpenAI."""
     vision_llm = ChatOpenAI(
-        api_key=OPENAI_API_KEY,
+        api_key=_get_openai_api_key(),
         base_url="https://api.openai.com/v1",
         max_retries=3,
         model=llm_name,
@@ -79,7 +79,7 @@ def get_vision_llm(llm_name: str) -> ChatOpenAI:
 def get_reasoning_llm(llm_name: str):
     """Get a reasoning LLM using Langchain's ChatOpenAI with high reasoning effort, e.g. o3 or gpt-5."""
     vision_llm = ChatOpenAI(
-        api_key=OPENAI_API_KEY,
+        api_key=_get_openai_api_key(),
         base_url="https://api.openai.com/v1",
         max_retries=3,
         model=llm_name,        # e.g. "gpt-5" or "gpt-5-chat"
@@ -93,7 +93,7 @@ def get_reasoning_llm(llm_name: str):
 def get_external_gemini_llm(llm_name: str):
     """Get a Gemini LLM using Langchain's ChatGoogleGenerativeAI, e.g. Gemini 2.5 Pro."""
     gemini_llm = ChatGoogleGenerativeAI(
-        api_key=GOOGLE_GENAI_API_KEY,
+        api_key=_get_google_genai_api_key(),
         model=llm_name,
         temperature=0,
         max_tokens=None,
@@ -124,7 +124,7 @@ def get_openai_compatible_llm(
     base_url = base_url or THIRD_PARTY_OPENAI_BASE_URL
     model = model or THIRD_PARTY_OPENAI_MODEL
     if api_key is None:
-        api_key = get_file_contents(THIRD_PARTY_OPENAI_KEY_PATH)
+        api_key = THIRD_PARTY_OPENAI_KEY
     return ChatOpenAI(
         api_key=api_key,
         base_url=base_url.rstrip("/") if base_url else "https://api.openai.com/v1",
@@ -207,8 +207,24 @@ def get_file_contents(filename):
     except FileNotFoundError:
         raise FileNotFoundError(f"'{filename}' file not found")
 
-GOOGLE_GENAI_API_KEY = get_file_contents(GOOGLE_GENAI_KEY_PATH)
-OPENAI_API_KEY = get_file_contents(OPENAI_API_KEY_PATH)
+
+# API keys 延迟加载，仅在调用对应 LLM 时读取，避免仅用第三方 API 时因未配置 Google/OpenAI key 而导入报错
+_openai_api_key = None
+_google_genai_api_key = None
+
+
+def _get_openai_api_key():
+    global _openai_api_key
+    if _openai_api_key is None:
+        _openai_api_key = get_file_contents(OPENAI_API_KEY_PATH)
+    return _openai_api_key
+
+
+def _get_google_genai_api_key():
+    global _google_genai_api_key
+    if _google_genai_api_key is None:
+        _google_genai_api_key = get_file_contents(GOOGLE_GENAI_KEY_PATH)
+    return _google_genai_api_key
 
 def get_50_frames_from_video(image_dir:str, n_samples=50) -> Tuple[int, List[str]]:
     """Get 50 image frames from a video."""

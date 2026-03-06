@@ -1,11 +1,12 @@
-# 讲座视频 → 分段 → 抽音频 → Whisper 得字幕，并生成视频配套 SRT
+# 讲座视频 → 分段 → 抽音频 → Whisper 得字幕，并生成视频配套 SRT（可选说话人分离）
 
-将一条讲座视频按固定时长切段、每段抽取音频并用 OpenAI Whisper 转写为字幕；同时对**整段视频**做一次带时间戳的转写，生成**标准 SRT 文件**（与 EGAgent 自有视频知识图谱流程兼容）。
+将一条讲座视频按固定时长切段、每段抽取音频并用 OpenAI Whisper 转写为字幕；同时对**整段视频**做一次带时间戳的转写，生成**标准 SRT 文件**（与 EGAgent 自有视频知识图谱流程兼容）。可选 **说话人分离**：安装 WhisperX 并传入 HuggingFace token 后，SRT 中每条字幕会带「说话人 0」「说话人 1」等标签。
 
 ## 依赖
 
 - **ffmpeg**：分段与抽音频（需已安装并加入 PATH）
 - **openai-whisper**：`pip install openai-whisper`（会安装 PyTorch）
+- **说话人分离（可选）**：`pip install whisperx`，并在 [pyannote/speaker-diarization-3.1](https://huggingface.co/pyannote/speaker-diarization-3.1) 同意条款后使用 `--hf-token` 传入 HuggingFace token
 
 ## 用法
 
@@ -25,6 +26,9 @@ python -m trans_whisper.run lecture.mp4 -o out --segment-duration 300 --whisper-
 
 # 转写后删除分段视频和 wav 以节省空间
 python -m trans_whisper.run lecture.mp4 -o out --no-keep-segments --no-keep-audio
+
+# 启用说话人分离（输出 SRT 中带「说话人 0」「说话人 1」等）
+python -m trans_whisper.run lecture.mp4 -o out --diarize --hf-token YOUR_HF_TOKEN --language zh
 ```
 
 ### 输出结构

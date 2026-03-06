@@ -35,7 +35,7 @@ OPENAI_API_KEY_PATH = "path/to/openai-api-key.txt"
 # Third-party OpenAI-compatible API (optional). Set agent_backbone = 'openai_compatible' to use.
 THIRD_PARTY_OPENAI_BASE_URL = "https://your-api.com/v1"  # e.g. https://api.openai.com/v1
 THIRD_PARTY_OPENAI_MODEL = "your-model-name"             # model name on the third-party service
-THIRD_PARTY_OPENAI_KEY_PATH = "path/to/your-api-key.txt" # file with API key; can set to OPENAI_API_KEY_PATH if same
+THIRD_PARTY_OPENAI_KEY = "your-api-key"  # 第三方 API 的 Key（直接填写，勿提交到 git）
 
 # Captions and transcripts
 CAPTION_ROOT = EGAGENT_ROOT / "captions"  # egolife and videomme captions root

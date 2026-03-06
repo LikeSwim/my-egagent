@@ -54,6 +54,23 @@ def main():
         action="store_true",
         help="转写完成后删除 wav 以节省空间",
     )
+    parser.add_argument(
+        "--diarize",
+        action="store_true",
+        help="启用说话人分离（需安装 whisperx，且建议传入 --hf-token 以使用 pyannote 模型）",
+    )
+    parser.add_argument(
+        "--hf-token",
+        type=str,
+        default=None,
+        help="HuggingFace token，用于 pyannote 说话人分离（在 hf.co/pyannote/speaker-diarization-3.1 同意条款后获取）",
+    )
+    parser.add_argument(
+        "--speaker-prefix",
+        type=str,
+        default="说话人",
+        help="SRT 中说话人标签前缀，如「说话人」或「Speaker」",
+    )
     args = parser.parse_args()
 
     video_path = Path(args.video)
@@ -66,7 +83,7 @@ def main():
 
     print(f"输入视频: {video_path}")
     print(f"输出目录: {output_dir}")
-    print(f"分段时长: {args.segment_duration}s | Whisper: {args.whisper_model} | 语言: {language or '自动'}")
+    print(f"分段时长: {args.segment_duration}s | Whisper: {args.whisper_model} | 语言: {language or '自动'}" + (" | 说话人分离: 开" if args.diarize else ""))
     print("开始处理...")
 
     results = video_to_transcripts(
@@ -78,6 +95,9 @@ def main():
         ffmpeg=args.ffmpeg,
         keep_segments=not args.no_keep_segments,
         keep_audio=not args.no_keep_audio,
+        diarize=args.diarize,
+        hf_token=args.hf_token,
+        speaker_prefix=args.speaker_prefix,
     )
 
     if not results:
