@@ -40,7 +40,10 @@ from paths import (
     GOOGLE_GENAI_KEY_PATH,
     OPENAI_API_KEY_PATH,
     RESULTS_ROOT,
-    DB_ROOT
+    DB_ROOT,
+    THIRD_PARTY_OPENAI_BASE_URL,
+    THIRD_PARTY_OPENAI_MODEL,
+    THIRD_PARTY_OPENAI_KEY_PATH,
 )
 
 def flatten_list(xss):
@@ -108,6 +111,30 @@ def get_vLLM(ip_address: str, llm_name: str):
         temperature=0,
     )
     return qwen_vl_local
+
+
+def get_openai_compatible_llm(
+    base_url: str = None,
+    model: str = None,
+    api_key: str = None,
+) -> ChatOpenAI:
+    """Get an LLM from a third-party API that supports OpenAI-compatible format (/v1/chat/completions).
+    Uses paths.THIRD_PARTY_* if base_url/model/api_key are not provided.
+    """
+    base_url = base_url or THIRD_PARTY_OPENAI_BASE_URL
+    model = model or THIRD_PARTY_OPENAI_MODEL
+    if api_key is None:
+        api_key = get_file_contents(THIRD_PARTY_OPENAI_KEY_PATH)
+    return ChatOpenAI(
+        api_key=api_key,
+        base_url=base_url.rstrip("/") if base_url else "https://api.openai.com/v1",
+        max_retries=3,
+        model=model,
+        temperature=0,
+        stream_usage=True,
+        streaming=False,
+        callbacks=None,
+    )
 
 def query_text_only(system_prompt, query, llm_name):
     """Query a text-only LLM using Langchain's ChatOpenAI."""

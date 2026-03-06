@@ -36,7 +36,7 @@ from typing import Literal, List, Dict, Any, Optional
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from paths import CAPTION_ROOT, TIMESTAMP_EPISODES_ROOT, VMME_ASR_DIR, VIDEO_MME_ROOT
-from utils import get_egolife_diarized_transcripts, load_srt_hhmmss, load_srt_only_text, clean_html_tags, seconds_to_hhmmss, get_vision_llm, get_vLLM, get_reasoning_llm, get_external_gemini_llm
+from utils import get_egolife_diarized_transcripts, load_srt_hhmmss, load_srt_only_text, clean_html_tags, seconds_to_hhmmss, get_vision_llm, get_vLLM, get_reasoning_llm, get_external_gemini_llm, get_openai_compatible_llm
 
 def get_llm_worker(system_prompt, human_prompt, structured_llm_class, model):
     """
@@ -51,6 +51,8 @@ def get_llm_worker(system_prompt, human_prompt, structured_llm_class, model):
         llm = get_external_gemini_llm(model)
     elif model == 'qwen-2.5-vl-7b':
         llm = get_vLLM("localhost", "Qwen/Qwen2.5-VL-7B-Instruct")
+    elif model == 'openai_compatible':
+        llm = get_openai_compatible_llm()
         
     llm_prompt = ChatPromptTemplate.from_messages(
         [

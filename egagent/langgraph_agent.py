@@ -81,6 +81,8 @@ def get_llm_worker(system_prompt, human_prompt, structured_llm_class, model):
         llm = get_external_gemini_llm(model)
     elif model == 'qwen-2.5-vl-7b':
         llm = get_vLLM("localhost", "Qwen/Qwen2.5-VL-7B-Instruct")
+    elif model == 'openai_compatible':
+        llm = get_openai_compatible_llm()
         
     llm_prompt = ChatPromptTemplate.from_messages(
         [
@@ -128,6 +130,8 @@ elif agent_backbone in ['gpt-4.1', 'gpt-4o']:
     llm = get_vision_llm(agent_backbone)
 elif agent_backbone in ['gpt-5', 'o3']:
     llm = get_reasoning_llm(agent_backbone)
+elif agent_backbone == 'openai_compatible':
+    llm = get_openai_compatible_llm()
 
 """
 ****************   Part 1: Planner, Router, Retrievers   ****************   

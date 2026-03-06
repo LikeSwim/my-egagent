@@ -32,6 +32,11 @@ MODEL_ROOT = EGAGENT_ROOT  # path containing multimodal embedding model
 GOOGLE_GENAI_KEY_PATH = "path/to/google-genai-key.txt"
 OPENAI_API_KEY_PATH = "path/to/openai-api-key.txt"
 
+# Third-party OpenAI-compatible API (optional). Set agent_backbone = 'openai_compatible' to use.
+THIRD_PARTY_OPENAI_BASE_URL = "https://your-api.com/v1"  # e.g. https://api.openai.com/v1
+THIRD_PARTY_OPENAI_MODEL = "your-model-name"             # model name on the third-party service
+THIRD_PARTY_OPENAI_KEY_PATH = "path/to/your-api-key.txt" # file with API key; can set to OPENAI_API_KEY_PATH if same
+
 # Captions and transcripts
 CAPTION_ROOT = EGAGENT_ROOT / "captions"  # egolife and videomme captions root
 VMME_ASR_DIR = VIDEO_MME_ROOT + "subtitle" 
