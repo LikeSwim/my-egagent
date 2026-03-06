@@ -2,14 +2,45 @@
 
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 DEFAULT_SEGMENT_DURATION_SEC = 600  # 10 分钟（与 LEMON 论文一致）
 
 
 def get_video_duration_sec(video_path: str | Path, ffmpeg: str = "ffmpeg") -> float:
-    """获取视频时长（秒）。失败返回 0。"""
+    """获取视频时长（秒）。先尝试 ffprobe，再回退到解析 ffmpeg 输出。失败返回 0。"""
     video_path = Path(video_path)
+    if not video_path.is_file():
+        return 0.0
+
+    # 1. 优先用 ffprobe（输出稳定，不依赖 locale）
+    if ffmpeg == "ffmpeg" or ffmpeg == "ffprobe":
+        ffprobe = "ffprobe"
+    else:
+        p = Path(ffmpeg).parent
+        ffprobe = str(p / ("ffprobe.exe" if sys.platform == "win32" else "ffprobe"))
+    try:
+        out = subprocess.run(
+            [
+                ffprobe, "-v", "error", "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1",
+                str(video_path),
+            ],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=10,
+        )
+        if out.returncode == 0 and out.stdout:
+            s = out.stdout.strip().split("\n")[0].strip()
+            if s and s.replace(".", "").replace(",", "").isdigit():
+                return float(s.replace(",", "."))
+    except (FileNotFoundError, ValueError, subprocess.TimeoutExpired):
+        pass
+
+    # 2. 回退：解析 ffmpeg -i 的 stderr（兼容 Duration: 00:01:23.45 或 00:01:23,45）
     try:
         out = subprocess.run(
             [ffmpeg, "-i", str(video_path), "-t", "0.1", "-f", "null", "-"],
@@ -17,9 +48,11 @@ def get_video_duration_sec(video_path: str | Path, ffmpeg: str = "ffmpeg") -> fl
             text=True,
             encoding="utf-8",
             errors="replace",
-            timeout=10,
+            timeout=15,
         )
-        dur_match = re.search(r"Duration: (\d+):(\d+):(\d+)\.?\d*", out.stderr or "")
+        combined = (out.stderr or "") + (out.stdout or "")
+        # 匹配 Duration: HH:MM:SS.ms 或 HH:MM:SS,ms
+        dur_match = re.search(r"Duration:\s*(\d+):(\d+):(\d+)[.,]?\d*", combined)
         if dur_match:
             h, m, s = int(dur_match.group(1)), int(dur_match.group(2)), float(dur_match.group(3))
             return h * 3600 + m * 60 + s

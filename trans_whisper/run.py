@@ -81,10 +81,15 @@ def main():
     )
 
     if not results:
-        print("未生成任何分段或字幕，请检查视频与 ffmpeg。")
+        print("未生成任何分段或字幕，请检查视频与 ffmpeg（需能正确解析时长）。")
         return 1
 
     srt_path = Path(output_dir) / f"{video_path.stem}.srt"
+    srt_only = results and results[0].get("srt_only") is True
+    if srt_only:
+        print(f"完成。已生成视频配套 SRT（分段未执行，可能因无法解析视频时长）:")
+        print(f"  {srt_path}")
+        return 0
     print(f"完成。共 {len(results)} 段，字幕目录: {output_dir}/transcripts/")
     print(f"合并字幕: {output_dir}/all_transcript.txt")
     if srt_path.exists():
